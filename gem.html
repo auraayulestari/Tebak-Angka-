@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Tebak Angka Modern</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Background gradient dinamis */
+      background: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
+      color: #f8fafc;
+    }
+
+    .game-card {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: #38bdf8;
+    }
+
+    p.subtitle {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-board {
+      display: flex;
+      justify-content: space-around;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.8rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #f1f5f9;
+    }
+
+    .level-select {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.2rem;
+    }
+
+    input[type="number"] {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+      font-size: 1.1rem;
+      text-align: center;
+      outline: none;
+    }
+
+    button {
+      padding: 0.75rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-submit {
+      background: #0284c7;
+      color: white;
+    }
+
+    .btn-submit:hover {
+      background: #0369a1;
+    }
+
+    .btn-reset {
+      width: 100%;
+      background: #334155;
+      color: #f8fafc;
+    }
+
+    .btn-reset:hover {
+      background: #475569;
+    }
+
+    .message {
+      min-height: 2.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .msg-success { color: #4ade80; }
+    .msg-error { color: #f87171; }
+    .msg-info { color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+  <div class="game-card">
+    <h1>Tebak Angka</h1>
+    <p class="subtitle">Pilih level dan tebak angka rahasia!</p>
+
+    <div class="stats-board">
+      <div class="stat-box">
+        <span class="stat-label">Skor</span>
+        <span id="scoreDisplay" class="stat-value">0</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">Sisa Nyawa</span>
+        <span id="livesDisplay" class="stat-value">10</span>
+      </div>
+    </div>
+
+    <div class="level-select">
+      <label for="levelSelect">Pilih Tingkat Kesulitan:</label>
+      <select id="levelSelect" onchange="initGame()">
+        <option value="easy">Mudah (1 - 50)</option>
+        <option value="medium" selected>Sedang (1 - 100)</option>
+        <option value="hard">Sulit (1 - 200)</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <input type="number" id="guessInput" placeholder="Masukkan angka..." min="1">
+      <button class="btn-submit" onclick="checkGuess()">Tebak</button>
+    </div>
+
+    <div id="message" class="message">Silakan mulai tebakanmu!</div>
+
+    <button class="btn-reset" onclick="initGame()">Reset Game</button>
+  </div>
+
+  <script>
+    let secretGoal;
+    let currentScore = 0;
+    let remainingLives = 10;
+    let maxRange = 100;
+    let isGameOver = false;
+
+    const levelConfigs = {
+      easy: { max: 50, lives: 10 },
+      medium: { max: 100, lives: 8 },
+      hard: { max: 200, lives: 6 }
+    };
+
+    function initGame() {
+      const level = document.getElementById('levelSelect').value;
+      const config = levelConfigs[level];
+
+      maxRange = config.max;
+      remainingLives = config.lives;
+      secretGoal = Math.floor(Math.random() * maxRange) + 1;
+      isGameOver = false;
+
+      document.getElementById('livesDisplay').innerText = remainingLives;
+      document.getElementById('guessInput').value = '';
+      document.getElementById('guessInput').disabled = false;
+      document.getElementById('guessInput').placeholder = `Angka 1 - ${maxRange}`;
+      
+      const msgElement = document.getElementById('message');
+      msgElement.innerText = `Game dimulai! Tebak angka antara 1 sampai ${maxRange}.`;
+      msgElement.className = 'message msg-info';
+    }
+
+    function checkGuess() {
+      if (isGameOver) return;
+
+      const inputElement = document.getElementById('guessInput');
+      const userGuess = parseInt(inputElement.value);
+      const msgElement = document.getElementById('message');
+
+      if (isNaN(userGuess) || userGuess < 1 || userGuess > maxRange) {
+        msgElement.innerText = `Masukkan angka valid antara 1 - ${maxRange}!`;
+        msgElement.className = 'message msg-error';
+        return;
+      }
+
+      if (userGuess === secretGoal) {
+        // Hitung skor berdasarkan sisa nyawa
+        const roundScore = remainingLives * 10;
+        currentScore += roundScore;
+        
+        document.getElementById('scoreDisplay').innerText = currentScore;
+        msgElement.innerText = `🎉 TEPAT! Angkanya adalah ${secretGoal}. +${roundScore} Poin!`;
+        msgElement.className = 'message msg-success';
+        
+        endGame();
+      } else {
+        remainingLives--;
+        document.getElementById('livesDisplay').innerText = remainingLives;
+
+        if (remainingLives <= 0) {
+          msgElement.innerText = `💥 Game Over! Angka rahasianya adalah ${secretGoal}.`;
+          msgElement.className = 'message msg-error';
+          endGame();
+        } else {
+          const hint = userGuess < secretGoal ? "Terlalu KECIL! ⬆️" : "Terlalu BESAR! ⬇️";
+          msgElement.innerText = `${hint} (Sisa percobaan: ${remainingLives})`;
+          msgElement.className = 'message msg-info';
+        }
+      }
+
+      inputElement.value = '';
+      inputElement.focus();
+    }
+
+    function endGame() {
+      isGameOver = true;
+      document.getElementById('guessInput').disabled = true;
+    }
+
+    // Mendukung penekanan tombol Enter pada keyboard
+    document.getElementById('guessInput').addEventListener('keyup', function(event) {
+      if (event.key === 'Enter') {
+        checkGuess();
+      }
+    });
+
+    // Jalankan game pertama kali saat halaman dimuat
+    initGame();
+  </script>
+</body>
+</html>
